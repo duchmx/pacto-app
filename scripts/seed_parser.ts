@@ -95,20 +95,18 @@ function main(): void {
 
     batch.push(row);
     if (batch.length >= BATCH_SIZE) {
-      insertBatch(db, batch);
-      inserted += batch.length;
+      inserted += insertBatch(db, batch);
       batch.length = 0;
     }
   }
 
   if (batch.length > 0) {
-    insertBatch(db, batch);
-    inserted += batch.length;
+    inserted += insertBatch(db, batch);
   }
 
   db.close();
 
-  console.log("Done. Inserted:", inserted, "| Skipped:", skipped);
+  console.log("Done. Inserted:", inserted, "| Skipped:", skipped, "(duplicates by UUID ignored)");
 }
 
 main();

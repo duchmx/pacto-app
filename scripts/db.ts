@@ -36,8 +36,9 @@ const INDEX_UUID = `CREATE UNIQUE INDEX IF NOT EXISTS idx_raw_facturas_tfd_uuid 
 const INDEX_EMISOR_FECHA = `CREATE INDEX IF NOT EXISTS idx_raw_facturas_emisor_fecha ON raw_facturas(emisor_rfc, fecha);`;
 const INDEX_RECEPTOR_FECHA = `CREATE INDEX IF NOT EXISTS idx_raw_facturas_receptor_fecha ON raw_facturas(receptor_rfc, fecha);`;
 
+// OR IGNORE: duplicate tfd_uuid (same CFDI in another file/path) is skipped by SQLite; no app-side check.
 const INSERT_SQL = `
-INSERT INTO raw_facturas (
+INSERT OR IGNORE INTO raw_facturas (
   source_file, cfdi_version, serie, folio, fecha, tipo_comprobante, forma_pago,
   subtotal, total, moneda, lugar_expedicion,
   emisor_rfc, emisor_nombre, emisor_regimen_fiscal,
@@ -65,15 +66,18 @@ export function createTable(db: Database.Database): void {
   db.exec(INDEX_RECEPTOR_FECHA);
 }
 
-/** Insert multiple rows inside a single transaction. */
-export function insertBatch(db: Database.Database, rows: RawFacturaRow[]): void {
-  if (rows.length === 0) return;
+/** Insert multiple rows in a transaction. Returns the number of rows actually inserted (duplicates by tfd_uuid are ignored). */
+export function insertBatch(db: Database.Database, rows: RawFacturaRow[]): number {
+  if (rows.length === 0) return 0;
   const insert = db.prepare(INSERT_SQL);
+  let inserted = 0;
   db.transaction(() => {
     for (const row of rows) {
-      insert.run(toDbParams(row));
+      const result = insert.run(toDbParams(row));
+      inserted += result.changes;
     }
   })();
+  return inserted;
 }
 
 function toDbParams(row: RawFacturaRow): Record<string, unknown> {
