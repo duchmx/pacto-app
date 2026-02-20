@@ -1,8 +1,9 @@
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { openDb, createTable, insertBatch } from "./db";
-import { parseCfdiToRow } from "./cfdi-mapper";
-import type { RawFacturaRow } from "./types";
+import { parseCfdi } from "./cfdi-mapper";
+import type { FacturaRow, ConceptoRow } from "./types";
 
 const BATCH_SIZE = 500;
 const FALLBACK_DB_NAME = "cfdi_export";
@@ -72,7 +73,7 @@ function main(): void {
   const xmlPaths = findXmlFiles(inputDir);
   console.log("Found", xmlPaths.length, "XML file(s).");
 
-  const batch: RawFacturaRow[] = [];
+  const batch: { factura: FacturaRow; conceptos: ConceptoRow[] }[] = [];
   let inserted = 0;
   let skipped = 0;
 
@@ -86,14 +87,25 @@ function main(): void {
       continue;
     }
 
-    const row = parseCfdiToRow(xml, filePath);
-    if (!row) {
+    const parsed = parseCfdi(xml, filePath);
+    if (!parsed) {
       console.error("Parse/skip (not CFDI or invalid):", filePath);
       skipped++;
       continue;
     }
 
-    batch.push(row);
+    const factura_uuid = parsed.factura.tfd_uuid ?? crypto.randomUUID();
+    const factura: FacturaRow = {
+      ...parsed.factura,
+      factura_uuid,
+    };
+    const conceptos: ConceptoRow[] = parsed.conceptos.map((c) => ({
+      ...c,
+      id: crypto.randomUUID(),
+      factura_uuid,
+    }));
+
+    batch.push({ factura, conceptos });
     if (batch.length >= BATCH_SIZE) {
       inserted += insertBatch(db, batch);
       batch.length = 0;

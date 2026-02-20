@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import type { RawFacturaRow } from "./types";
+import type { ParsedCfdi } from "./types";
 
 const PARSER_OPTIONS = {
   ignoreAttributes: false,
@@ -35,7 +35,6 @@ function attrNum(obj: Record<string, unknown> | undefined, name: string): number
 function extractTfd(complemento: unknown): Record<string, unknown> | null {
   if (!complemento || typeof complemento !== "object") return null;
   const o = complemento as Record<string, unknown>;
-  // Single child might be tfd:TimbreFiscalDigital or TimbreFiscalDigital
   const key = Object.keys(o).find(
     (k) => k.endsWith("TimbreFiscalDigital") || k === "TimbreFiscalDigital"
   );
@@ -55,23 +54,30 @@ function normalizeConceptos(conceptos: unknown): Record<string, unknown>[] {
   return [concepto as Record<string, unknown>];
 }
 
-/** Map one Concepto node to a plain object for JSON storage. */
-function mapConcepto(c: Record<string, unknown>): Record<string, unknown> {
-  return {
-    ClaveProdServ: attr(c, "ClaveProdServ"),
-    ClaveUnidad: attr(c, "ClaveUnidad"),
-    Cantidad: attr(c, "Cantidad"),
-    Descripcion: attr(c, "Descripcion"),
-    ValorUnitario: attr(c, "ValorUnitario"),
-    Importe: attr(c, "Importe"),
-    ObjetoImp: attr(c, "ObjetoImp"),
-  };
+/** Extract Impuestos: TotalImpuestosRetenidos, TotalImpuestosTrasladados, and Retenciones/Traslados as JSON. */
+function extractImpuestos(comp: Record<string, unknown>): {
+  totalImpuestosRetenidos: number | undefined;
+  totalImpuestosTrasladados: number | undefined;
+  retencionesJson: string | null;
+  trasladosJson: string | null;
+} {
+  const impuestos = comp.Impuestos as Record<string, unknown> | undefined;
+  if (!impuestos || typeof impuestos !== "object") {
+    return { totalImpuestosRetenidos: undefined, totalImpuestosTrasladados: undefined, retencionesJson: null, trasladosJson: null };
+  }
+  const totalImpuestosRetenidos = attrNum(impuestos, "TotalImpuestosRetenidos");
+  const totalImpuestosTrasladados = attrNum(impuestos, "TotalImpuestosTrasladados");
+  const retenciones = impuestos.Retenciones;
+  const traslados = impuestos.Traslados;
+  const retencionesJson = retenciones != null && typeof retenciones === "object" ? JSON.stringify(retenciones) : null;
+  const trasladosJson = traslados != null && typeof traslados === "object" ? JSON.stringify(traslados) : null;
+  return { totalImpuestosRetenidos, totalImpuestosTrasladados, retencionesJson, trasladosJson };
 }
 
 /**
- * Parse CFDI XML string and return one RawFacturaRow, or null if not a valid CFDI Comprobante.
+ * Parse CFDI XML string and return factura + conceptos, or null if not a valid CFDI Comprobante.
  */
-export function parseCfdiToRow(xmlString: string, sourcePath: string): RawFacturaRow | null {
+export function parseCfdi(xmlString: string, sourcePath: string): ParsedCfdi | null {
   let parsed: Record<string, unknown>;
   try {
     parsed = parser.parse(xmlString) as Record<string, unknown>;
@@ -89,10 +95,8 @@ export function parseCfdiToRow(xmlString: string, sourcePath: string): RawFactur
   const receptor = comp.Receptor as Record<string, unknown> | undefined;
   const conceptosNode = comp.Conceptos as Record<string, unknown> | undefined;
   const conceptosList = conceptosNode ? normalizeConceptos(conceptosNode) : [];
-  const conceptosJson =
-    conceptosList.length > 0
-      ? JSON.stringify(conceptosList.map(mapConcepto))
-      : null;
+
+  const { totalImpuestosRetenidos, totalImpuestosTrasladados, retencionesJson, trasladosJson } = extractImpuestos(comp);
 
   let complementosJson: string | null = null;
   let tfdUuid: string | undefined;
@@ -110,14 +114,18 @@ export function parseCfdiToRow(xmlString: string, sourcePath: string): RawFactur
     complementosJson = JSON.stringify(complemento);
   }
 
+  // Raw Comprobante attributes excluding MetodoPago (stored in metodo_pago column).
   const rawComprobanteAttrs: Record<string, unknown> = {};
   for (const key of Object.keys(comp)) {
-    if (key.startsWith("@_")) rawComprobanteAttrs[key.slice(2)] = (comp as Record<string, unknown>)[key];
+    if (!key.startsWith("@_")) continue;
+    const attrName = key.slice(2);
+    if (attrName === "MetodoPago") continue;
+    rawComprobanteAttrs[attrName] = (comp as Record<string, unknown>)[key];
   }
   const rawComprobanteAttrsJson =
     Object.keys(rawComprobanteAttrs).length > 0 ? JSON.stringify(rawComprobanteAttrs) : null;
 
-  const row: RawFacturaRow = {
+  const factura: ParsedCfdi["factura"] = {
     source_file: sourcePath,
     cfdi_version: version,
     serie: attr(comp, "Serie"),
@@ -125,10 +133,13 @@ export function parseCfdiToRow(xmlString: string, sourcePath: string): RawFactur
     fecha: attr(comp, "Fecha"),
     tipo_comprobante: attr(comp, "TipoDeComprobante"),
     forma_pago: attr(comp, "FormaPago"),
+    metodo_pago: attr(comp, "MetodoPago"),
     subtotal: attrNum(comp, "SubTotal"),
     total: attrNum(comp, "Total"),
     moneda: attr(comp, "Moneda"),
     lugar_expedicion: attr(comp, "LugarExpedicion"),
+    total_impuestos_retenidos: totalImpuestosRetenidos,
+    total_impuestos_trasladados: totalImpuestosTrasladados,
     emisor_rfc: emisor ? attr(emisor, "Rfc") : undefined,
     emisor_nombre: emisor ? attr(emisor, "Nombre") : undefined,
     emisor_regimen_fiscal: emisor ? attr(emisor, "RegimenFiscal") : undefined,
@@ -140,10 +151,19 @@ export function parseCfdiToRow(xmlString: string, sourcePath: string): RawFactur
     tfd_uuid: tfdUuid,
     tfd_fecha_timbrado: tfdFechaTimbrado,
     tfd_rfc_proveedor_certificacion: tfdRfcProvCertif,
-    conceptos_json: conceptosJson,
+    retenciones_json: retencionesJson,
+    traslados_json: trasladosJson,
     complementos_json: complementosJson,
     raw_comprobante_attrs_json: rawComprobanteAttrsJson,
   };
 
-  return row;
+  const conceptos: ParsedCfdi["conceptos"] = conceptosList.map((c) => ({
+    clave_prod_serv: attr(c, "ClaveProdServ"),
+    descripcion: attr(c, "Descripcion"),
+    cantidad: attrNum(c, "Cantidad"),
+    valor_unitario: attrNum(c, "ValorUnitario"),
+    importe: attrNum(c, "Importe"),
+  }));
+
+  return { factura, conceptos };
 }
