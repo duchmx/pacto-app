@@ -39,9 +39,17 @@ The app uses Supabase for auth and (when you add it) the database. Client module
    - `lib/supabase/server.ts` — server client (Server Components, Server Actions, Route Handlers).
    - `lib/supabase/middleware.ts` — session refresh and route protection (used by root `middleware.ts`).
 
-4. **Schema and securing the database**
-   - Create your tables in Supabase **SQL Editor** (e.g. `propiedades`, `clientes`, `contratos`, etc.) and update the app when ready.
-   - **Important:** enable **Row Level Security (RLS)** on every table and add policies so only authenticated users (or the right users) can read/write. See **[docs/DATABASE_SECURITY.md](docs/DATABASE_SECURITY.md)** for step-by-step RLS setup.
+4. **Current Supabase schema (MVP)**
+   - `personas` — billing entities we issue invoices from (RFC, legal name, tax regime, short name).
+   - `clientes` — clients/tenants we bill (RFC, legal name, tax regime, short name).
+   - `facturas` — income invoices: links a `persona` to a `cliente` with amounts (`subtotal`, `retenciones`, `traslados`, `total`) and `fecha_emision`.
+   - `conceptos` — invoice line items: SAT product/service key, SAT description, business `concepto`, quantity, unit value, and line `importe`.
+   - For this MVP we are **not** using `contratos` or `cargos`; graphs are based purely on actual income from `facturas` and their `conceptos`.
+
+5. **Database security (RLS)**
+   - Enable **Row Level Security (RLS)** on every table (`personas`, `clientes`, `facturas`, `conceptos`).
+   - Add policies so only authenticated users can read/write. A simple starting point is “allow all operations for `authenticated` users”.
+   - See **[docs/DATABASE_SECURITY.md](docs/DATABASE_SECURITY.md)** for step-by-step RLS setup and example SQL you can paste into the Supabase SQL Editor.
 
 ---
 
@@ -65,7 +73,7 @@ Each push to `main` triggers a new Vercel deployment. Env vars are set in Vercel
 - `app/` — App Router: `layout.tsx`, `(dashboard)/` with dashboard layout and pages.
 - `app/(dashboard)/` — Dashboard shell: sidebar + pages (Dashboard, Properties, Contracts, Settings).
 - `components/` — `app-sidebar.tsx` (nav), `ui/` (shadcn components).
-- `lib/` — `utils.ts`, `supabase/client.ts`, `supabase/server.ts`, `supabase/middleware.ts`.
+- `lib/` — `utils.ts`, `supabase/client.ts`, `supabase/server.ts`, `supabase/middleware.ts`, `supabase/types.ts` (typed database schema for autocomplete).
 - `docs/DATABASE_SECURITY.md` — how to secure the database with Row Level Security (RLS).
 
 Without `.env.local`, the app runs but redirects to `/login`; add your Supabase URL and anon key to use auth and the dashboard.

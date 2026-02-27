@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import type { Database } from "./types";
 
 /**
  * Supabase client for Client Components (browser).
@@ -14,5 +15,6 @@ export const createClient = () => {
     );
   }
 
-  return createBrowserClient(url, key);
+  return createBrowserClient<Database>(url, key);
 };
+
