@@ -50,7 +50,7 @@ export function IncomeCard({ data }: IncomeCardProps) {
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium text-muted-foreground">
-            Cobranza actual acumulada
+            Cobranza acumulada YoY
           </p>
           <p className="text-2xl font-semibold tabular-nums md:text-3xl">
             {formatMxn(data.ytdTotal)}
@@ -65,7 +65,7 @@ export function IncomeCard({ data }: IncomeCardProps) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
-            margin={{ top: 8, right: 8, left: 0, bottom: 28 }}
+            margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
           >
             <CartesianGrid
               strokeDasharray="3 3"
@@ -131,8 +131,8 @@ export function IncomeCard({ data }: IncomeCardProps) {
                 value: yoyLabel,
                 position:
                   data.currentMonthIndex >= 9
-                    ? "insideBottomLeft"
-                    : "insideBottomRight",
+                    ? "insideBottomRight"
+                    : "insideBottomLeft",
                 offset: 6,
                 fill: "var(--muted-foreground)",
                 fontSize: 11,
