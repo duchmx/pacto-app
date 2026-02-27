@@ -11,8 +11,7 @@ export default async function DashboardPage() {
           Dashboard
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Financial overview and rent income from facturas (SAT rent keys
-          80131500–80131599).
+          Estado actual de las rentas.
         </p>
       </div>
 

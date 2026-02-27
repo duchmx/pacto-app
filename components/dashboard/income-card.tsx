@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, useState, useEffect } from "react";
+
 import {
   LineChart,
   Line,
@@ -40,6 +42,21 @@ function buildChartData(data: IncomeDashboardData) {
 
 export function IncomeCard({ data }: IncomeCardProps) {
   const chartData = buildChartData(data);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [xAxisInterval, setXAxisInterval] = useState<0 | 1>(0);
+
+  // Show all month labels when wide enough; every other when tight (one on, one off).
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      setXAxisInterval(w >= 420 ? 0 : 1);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const yoyLabel =
     data.yoyPercent != null
       ? `${data.yoyPercent >= 0 ? "+" : ""}${data.yoyPercent.toFixed(1)}% YoY`
@@ -61,7 +78,11 @@ export function IncomeCard({ data }: IncomeCardProps) {
           </p>
         </div>
       </CardHeader>
-      <CardContent className="relative -mx-1 h-[220px] w-full pl-0 pr-2 md:h-[260px]">
+      <CardContent className="relative -mx-1 w-full pl-0 pr-2">
+        <div
+          ref={containerRef}
+          className="h-[220px] md:h-[260px]"
+        >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
@@ -74,6 +95,7 @@ export function IncomeCard({ data }: IncomeCardProps) {
             />
             <XAxis
               dataKey="name"
+              interval={xAxisInterval}
               tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
               axisLine={{ stroke: "var(--border)" }}
               tickLine={false}
@@ -140,6 +162,7 @@ export function IncomeCard({ data }: IncomeCardProps) {
             />
           </LineChart>
         </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

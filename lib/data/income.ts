@@ -22,7 +22,7 @@ export interface IncomeDashboardData {
   monthLabels: string[];
 }
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
 /**
  * Builds monthly buckets (1–12) of rent income for a given year from factura+concepto rows.
