@@ -16,6 +16,90 @@ Repeat for every table (e.g. `propiedades`, `clientes`, `contratos`, `cargos`, `
 
 Until you define your schema and roles, a simple approach is: **allow only signed-in users** to read/write.
 
+### 2.1. Production policies for `propiedades` and `contratos`
+
+For the core operational tables `propiedades` and `contratos`, the current production posture is:
+
+- **Only authenticated users** can read and write any row.
+- We do not yet restrict by `empresa_id` or specific user ownership.
+
+This is implemented by checking that `auth.uid()` is not null in every policy.
+
+Run the following SQL in Supabase:
+
+```sql
+-- Enable RLS on nuevas tablas operativas
+ALTER TABLE public.propiedades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contratos ENABLE ROW LEVEL SECURITY;
+
+-- Optional: clean up any old policies before recreating
+DROP POLICY IF EXISTS "Authenticated users can select propiedades" ON public.propiedades;
+DROP POLICY IF EXISTS "Authenticated users can insert propiedades" ON public.propiedades;
+DROP POLICY IF EXISTS "Authenticated users can update propiedades" ON public.propiedades;
+DROP POLICY IF EXISTS "Authenticated users can delete propiedades" ON public.propiedades;
+
+DROP POLICY IF EXISTS "Authenticated users can select contratos" ON public.contratos;
+DROP POLICY IF EXISTS "Authenticated users can insert contratos" ON public.contratos;
+DROP POLICY IF EXISTS "Authenticated users can update contratos" ON public.contratos;
+DROP POLICY IF EXISTS "Authenticated users can delete contratos" ON public.contratos;
+
+-- propiedades: full CRUD for any authenticated user
+CREATE POLICY "Authenticated users can select propiedades"
+  ON public.propiedades
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can insert propiedades"
+  ON public.propiedades
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can update propiedades"
+  ON public.propiedades
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can delete propiedades"
+  ON public.propiedades
+  FOR DELETE
+  TO authenticated
+  USING (auth.uid() IS NOT NULL);
+
+-- contratos: full CRUD for any authenticated user
+CREATE POLICY "Authenticated users can select contratos"
+  ON public.contratos
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can insert contratos"
+  ON public.contratos
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can update contratos"
+  ON public.contratos
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can delete contratos"
+  ON public.contratos
+  FOR DELETE
+  TO authenticated
+  USING (auth.uid() IS NOT NULL);
+```
+
+You can tighten these later (for example, scoping by `empresa_id` or an `owner_user_id`) while keeping the same basic structure.
+
+### 2.2. Generic example for any table
+
 Example for a table named `propiedades`:
 
 ```sql

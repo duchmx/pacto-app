@@ -67,7 +67,7 @@ export function IncomeCard({ data }: IncomeCardProps) {
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium text-muted-foreground">
-            Cobranza acumulada YoY
+            Cobranza acumulada YTD
           </p>
           <p className="text-2xl font-semibold tabular-nums md:text-3xl">
             {formatMxn(data.ytdTotal)}
@@ -79,89 +79,88 @@ export function IncomeCard({ data }: IncomeCardProps) {
         </div>
       </CardHeader>
       <CardContent className="relative -mx-1 w-full pl-0 pr-2">
-        <div
-          ref={containerRef}
-          className="h-[220px] md:h-[260px]"
-        >
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={chartData}
-            margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="var(--border)"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="name"
-              interval={xAxisInterval}
-              tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-              axisLine={{ stroke: "var(--border)" }}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v) =>
-                v >= 1e6
-                  ? `${(v / 1e6).toFixed(1)}M`
-                  : `${(v / 1e3).toFixed(0)}k`
-              }
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius)",
-              }}
-              labelStyle={{ color: "var(--foreground)" }}
-              formatter={(value, name) => [
-                typeof value === "number" ? formatMxn(value) : "—",
-                name ?? "",
-              ]}
-              labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ""}
-            />
-            {/* Last year: non-bright grey (behind) */}
-            <Line
-              type="monotone"
-              dataKey="lastYear"
-              stroke="var(--muted-foreground)"
-              strokeOpacity={0.7}
-              strokeWidth={1.5}
-              dot={false}
-              name="Last year"
-            />
-            {/* This year: bright blue (laser-like); stops at current month (no future data) */}
-            <Line
-              type="monotone"
-              dataKey="thisYear"
-              stroke="rgb(59 130 246)"
-              strokeWidth={2.5}
-              dot={false}
-              connectNulls={false}
-              name="This year"
-            />
-            {/* Vertical line at today's month; YoY% label above x-axis, to the right (or left if tight) */}
-            <ReferenceLine
-              x={data.monthLabels[data.currentMonthIndex]}
-              stroke="var(--foreground)"
-              strokeOpacity={0.35}
-              strokeDasharray="4 4"
-              label={{
-                value: yoyLabel,
-                position:
-                  data.currentMonthIndex >= 9
-                    ? "insideBottomRight"
-                    : "insideBottomLeft",
-                offset: 6,
-                fill: "var(--muted-foreground)",
-                fontSize: 11,
-              }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <div ref={containerRef} className="h-[220px] md:h-[260px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={chartData}
+              margin={{ top: 0, right: 8, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--border)"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="name"
+                interval={xAxisInterval}
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                axisLine={{ stroke: "var(--border)" }}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) =>
+                  v >= 1e6
+                    ? `${(v / 1e6).toFixed(1)}M`
+                    : `${(v / 1e3).toFixed(0)}k`
+                }
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "var(--card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                }}
+                labelStyle={{ color: "var(--foreground)" }}
+                formatter={(value, name) => [
+                  typeof value === "number" ? formatMxn(value) : "—",
+                  name ?? "",
+                ]}
+                labelFormatter={(_, payload) =>
+                  payload?.[0]?.payload?.name ?? ""
+                }
+              />
+              {/* Last year: non-bright grey (behind) */}
+              <Line
+                type="monotone"
+                dataKey="lastYear"
+                stroke="var(--muted-foreground)"
+                strokeOpacity={0.7}
+                strokeWidth={1.5}
+                dot={false}
+                name="Año pasado"
+              />
+              {/* This year: bright blue (laser-like); stops at current month (no future data) */}
+              <Line
+                type="monotone"
+                dataKey="thisYear"
+                stroke="rgb(59 130 246)"
+                strokeWidth={2.5}
+                dot={false}
+                connectNulls={false}
+                name="Este año"
+              />
+              {/* Vertical line at today's month; YoY% label above x-axis, to the right (or left if tight) */}
+              <ReferenceLine
+                x={data.monthLabels[data.currentMonthIndex]}
+                stroke="var(--foreground)"
+                strokeOpacity={0.35}
+                strokeDasharray="4 4"
+                label={{
+                  value: yoyLabel,
+                  position:
+                    data.currentMonthIndex >= 9
+                      ? "insideBottomRight"
+                      : "insideBottomLeft",
+                  offset: 6,
+                  fill: "var(--muted-foreground)",
+                  fontSize: 11,
+                }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </CardContent>
     </Card>

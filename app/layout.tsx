@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 // Document title and name when "Add to Home Screen" on iOS.
 export const metadata: Metadata = {
-  title: "Pacto Inmobiliario | Dashboard",
+  title: "Pacto App",
   description: "Property management and financial dashboard",
   applicationName: "Pacto App",
   appleWebApp: {
