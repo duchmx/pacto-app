@@ -1,9 +1,4 @@
-import { getIncomeDashboardData } from "@/lib/data/income";
-import { IncomeCard } from "@/components/dashboard/income-card";
-
 export default async function DashboardPage() {
-  const incomeData = await getIncomeDashboardData();
-
   return (
     <div className="space-y-6">
       <div>
@@ -14,10 +9,6 @@ export default async function DashboardPage() {
           Estado actual de las rentas.
         </p>
       </div>
-
-      <section aria-label="Rent income YTD">
-        <IncomeCard data={incomeData} />
-      </section>
     </div>
   );
 }
